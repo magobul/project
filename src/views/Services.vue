@@ -22,6 +22,8 @@
 <script>
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'Services',
   data() {
@@ -37,7 +39,7 @@ export default {
   methods: {
     async loadServices() {
       try {
-        const response = await axios.get('http://localhost:3000/api/services')
+        const response = await axios.get(`${API_URL}/api/services`)
         this.services = response.data
       } catch (error) {
         console.error('Ошибка загрузки услуг:', error)
