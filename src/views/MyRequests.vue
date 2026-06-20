@@ -79,6 +79,8 @@ import axios from 'axios'
 import socketService from '../plugins/socket.js'
 import PalletsManage from './PalletsManage.vue'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'MyRequests',
   components: {
@@ -137,7 +139,7 @@ export default {
     async loadRequests() {
       this.loading = true
       try {
-        const response = await axios.get(`http://localhost:3000/api/client/requests/${this.user.id}`)
+        const response = await axios.get(`${API_URL}/api/client/requests/${this.user.id}`)
         this.requests = response.data
         
         // Инициализируем счетчики нулями
@@ -165,7 +167,7 @@ export default {
       
       this.loadingPallets[requestId] = true
       try {
-        const response = await axios.get(`http://localhost:3000/api/requests/${requestId}/pallets`)
+        const response = await axios.get(`${API_URL}/api/requests/${requestId}/pallets`)
         const count = response.data.length
         // В Vue 3 можно просто присвоить значение
         this.palletsCount[requestId] = count
