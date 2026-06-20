@@ -161,6 +161,8 @@ import AssignEmployee from './AssignEmployee.vue'
 import PalletsManage from './PalletsManage.vue'
 import Chart from 'chart.js/auto'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'AdminPanel',
   components: {
@@ -293,8 +295,8 @@ export default {
     async loadData() {
       try {
         const [requestsRes, statsRes] = await Promise.all([
-          axios.get('http://localhost:3000/api/admin/requests'),
-          axios.get('http://localhost:3000/api/admin/stats')
+          axios.get(`${API_URL}/api/admin/requests`),
+          axios.get(`${API_URL}/api/admin/stats`)
         ])
         
         this.requests = requestsRes.data
@@ -388,7 +390,7 @@ export default {
     
     async loadEmployees() {
       try {
-        const response = await axios.get('http://localhost:3000/api/admin/employees')
+        const response = await axios.get(`${API_URL}/api/admin/employees`)
         this.employees = response.data
       } catch (error) {
         console.error('Ошибка загрузки сотрудников:', error)
@@ -408,7 +410,7 @@ export default {
     
     async loadPalletsCountForRequest(requestId) {
       try {
-        const response = await axios.get(`http://localhost:3000/api/requests/${requestId}/pallets`)
+        const response = await axios.get(`${API_URL}/api/requests/${requestId}/pallets`)
         this.palletsCount[requestId] = response.data.length
       } catch (error) {
         this.palletsCount[requestId] = 0
@@ -427,7 +429,7 @@ export default {
     
     async updateStatus(request) {
       try {
-        await axios.put(`http://localhost:3000/api/admin/requests/${request.id}`, {
+        await axios.put(`${API_URL}/api/admin/requests/${request.id}`, {
           status: request.status
         })
         this.showNotification('Статус обновлен', `Статус заявки изменен на ${this.getStatusText(request.status)}`, 'success')
@@ -495,7 +497,7 @@ ${request.assigned_employee_id ? 'Сотрудник: ' + this.getEmployeeName(r
         
         const response = await axios({
           method: 'get',
-          url: 'http://localhost:3000/api/admin/export/excel',
+          url: `${API_URL}/api/admin/export/excel`,
           responseType: 'blob',
           timeout: 30000
         })
@@ -533,7 +535,7 @@ ${request.assigned_employee_id ? 'Сотрудник: ' + this.getEmployeeName(r
         
         const response = await axios({
           method: 'get',
-          url: 'http://localhost:3000/api/admin/export/pallets-excel',
+          url: `${API_URL}/api/admin/export/pallets-excel`,
           responseType: 'blob',
           timeout: 30000
         })
