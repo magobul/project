@@ -86,6 +86,8 @@
 <script>
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'Gallery',
   data() {
@@ -117,9 +119,9 @@ export default {
         return filePath
       }
       if (filePath.startsWith('/gallery/')) {
-        return `http://localhost:3000${filePath}`
+        return `${API_URL}${filePath}`
       }
-      return `http://localhost:3000/gallery/${filePath}`
+      return `${API_URL}/gallery/${filePath}`
     },
     
     async fastLoad() {
