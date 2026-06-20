@@ -41,6 +41,8 @@
 import axios from 'axios'
 import socketService from '../plugins/socket.js'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'Register',
   data() {
@@ -80,7 +82,7 @@ export default {
       this.loading = true;
       
       try {
-        const response = await axios.post('http://localhost:3000/api/register', this.form)
+        const response = await axios.post(`${API_URL}/api/register`, this.form)
         
         console.log('Ответ сервера:', response.data);
         
