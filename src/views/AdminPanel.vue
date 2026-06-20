@@ -488,7 +488,7 @@ ${request.assigned_employee_id ? 'Сотрудник: ' + this.getEmployeeName(r
     },
     
     // Экспорт в Excel
-   async exportRequests() {
+    async exportRequests() {
   if (this.exporting) return
   
   this.exporting = true
@@ -612,7 +612,7 @@ async exportPallets() {
       window.URL.revokeObjectURL(url)
     }, 100)
     
-    this.showNotification('Экспорт выполнен', 'Данные паллет успешно экспортированы в Excel', 'success')
+    this.showNotification(' Экспорт выполнен', 'Данные паллет успешно экспортированы в Excel', 'success')
     
   } catch (error) {
     console.error(' Ошибка экспорта:', error)
@@ -620,7 +620,8 @@ async exportPallets() {
   } finally {
     this.exporting = false
   }
-},
+}
+  },
   watch: {
     servicesData: {
       handler() {
