@@ -1,44 +1,68 @@
 <template>
-  <div class="register container">
-    <div class="form-container">
-      <h2>Регистрация</h2>
-      <form @submit.prevent="register">
-        <div class="form-group">
-          <label>Имя Фамилия</label>
-          <input v-model="form.name" type="text" required>
-        </div>
+  <div class="register">
+    <div class="container">
+      <div class="form-container">
+        <h2>Регистрация</h2>
         
-        <div class="form-group">
-          <label>Email</label>
-          <input v-model="form.email" type="email" required>
-        </div>
+        <form @submit.prevent="register">
+          <div class="form-group">
+            <input 
+              v-model="form.name" 
+              type="text" 
+              placeholder="Имя Фамилия" 
+              required
+              :disabled="loading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <input 
+              v-model="form.email" 
+              type="email" 
+              placeholder="Email" 
+              required
+              :disabled="loading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <input 
+              v-model="form.phone" 
+              type="tel" 
+              placeholder="Телефон" 
+              required
+              :disabled="loading"
+            >
+          </div>
+          
+          <div class="form-group">
+            <input 
+              v-model="form.password" 
+              type="password" 
+              placeholder="Пароль" 
+              required
+              :disabled="loading"
+            >
+          </div>
+          
+          <button type="submit" class="btn" :disabled="loading">
+            {{ loading ? 'Регистрация...' : 'Зарегистрироваться' }}
+          </button>
+        </form>
         
-        <div class="form-group">
-          <label>Телефон</label>
-          <input v-model="form.phone" type="tel" required>
+        <div class="form-links">
+          <p>Уже есть аккаунт? <router-link to="/login">Войти</router-link></p>
+          <p><router-link to="/admin">Вход для администратора</router-link></p>
         </div>
-        
-        <div class="form-group">
-          <label>Пароль</label>
-          <input v-model="form.password" type="password" required>
-        </div>
-        
-        <button type="submit" class="btn" :disabled="loading">
-          {{ loading ? 'Регистрация...' : 'Зарегистрироваться' }}
-        </button>
-      </form>
-      
-      <p class="login-link">
-        Уже есть аккаунт? <router-link to="/login">Войти</router-link>
-      </p>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios'
+import socketService from '../plugins/socket.js'
 
-// Получаем URL API из переменной окружения
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export default {
@@ -51,13 +75,25 @@ export default {
         name: '',
         phone: ''
       },
-      loading: false,
-      error: ''
+      loading: false
     }
   },
+  mounted() {
+    // Очищаем старые данные при загрузке страницы
+    this.clearAuthData()
+  },
   methods: {
+    clearAuthData() {
+      localStorage.removeItem('user')
+      localStorage.removeItem('manager')
+      localStorage.removeItem('token')
+      
+      // Отключаем Socket.IO
+      socketService.disconnect()
+    },
+    
     async register() {
-      // Валидация
+      // Валидация перед отправкой
       if (!this.form.name.trim()) {
         alert('Введите имя')
         return
@@ -91,58 +127,66 @@ export default {
       }
       
       this.loading = true
-      this.error = ''
       
       try {
-        console.log('📝 Отправка регистрации:', this.form.email)
-        console.log('📡 API URL:', API_URL)
+        console.log('Попытка регистрации:', this.form.email)
+        console.log('API URL:', API_URL)
         
-        const response = await axios({
-          method: 'post',
-          url: `${API_URL}/api/register`,
-          data: {
-            name: this.form.name.trim(),
-            email: this.form.email.trim(),
-            phone: this.form.phone.trim(),
-            password: this.form.password
-          },
-          timeout: 30000,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
+        const response = await axios.post(`${API_URL}/api/register`, {
+          name: this.form.name.trim(),
+          email: this.form.email.trim(),
+          phone: this.form.phone.trim(),
+          password: this.form.password
         })
         
-        console.log('✅ Ответ сервера:', response.data)
+        console.log('Ответ сервера:', response.data)
         
         if (response.data.user) {
-          // Сохраняем пользователя
-          localStorage.setItem('user', JSON.stringify(response.data.user))
+          const userData = response.data.user
           
-          // Отправляем событие о входе
+          // Сохраняем данные пользователя
+          localStorage.setItem('user', JSON.stringify(userData))
+          
+          // Подключаем Socket.IO с данными пользователя
+          socketService.connect({
+            userId: userData.id,
+            userRole: userData.role || 'client',
+            clientId: userData.id
+          })
+          
+          // Отправляем событие о входе для обновления других компонентов
           const loginEvent = new CustomEvent('user-login', { 
             detail: { 
-              user: response.data.user, 
+              user: userData, 
               timestamp: Date.now(),
               source: 'register'
             } 
           })
           window.dispatchEvent(loginEvent)
           
-          alert('✅ Регистрация успешна!')
-          this.$router.push('/profile')
+          // Отправляем событие аутентификации через сокет
+          if (socketService.isConnected) {
+            socketService.emit('client_login', {
+              userId: userData.id,
+              userEmail: userData.email,
+              timestamp: Date.now()
+            })
+          }
+          
+          console.log('Регистрация выполнена успешно')
+          
+          // Перенаправляем в личный кабинет
+          setTimeout(() => {
+            this.$router.push('/profile')
+          }, 100)
         } else {
-          alert('❌ Ошибка: неверный формат ответа от сервера')
+          throw new Error('Неверный формат ответа от сервера')
         }
-        
       } catch (error) {
-        console.error('❌ Ошибка регистрации:', error)
+        console.error('Ошибка регистрации:', error)
         
         let errorMessage = 'Ошибка регистрации'
-        
-        if (error.code === 'ECONNABORTED') {
-          errorMessage = 'Превышено время ожидания ответа от сервера. Попробуйте позже.'
-        } else if (error.response?.data?.error) {
+        if (error.response?.data?.error) {
           errorMessage = error.response.data.error
         } else if (error.response?.data?.message) {
           errorMessage = error.response.data.message
@@ -150,8 +194,10 @@ export default {
           errorMessage = error.message
         }
         
-        alert('❌ ' + errorMessage)
-        this.error = errorMessage
+        alert(errorMessage)
+        
+        // Очищаем данные при ошибке
+        this.clearAuthData()
       } finally {
         this.loading = false
       }
@@ -162,17 +208,22 @@ export default {
 
 <style scoped>
 .register {
-  min-height: 80vh;
+  background-color: #E2D4C2;
+  min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #F2E9DE;
   padding: 40px 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .form-container {
   width: 100%;
-  max-width: 400px;
   background: white;
   padding: 2rem;
   border-radius: 10px;
@@ -183,17 +234,11 @@ export default {
   text-align: center;
   margin-bottom: 2rem;
   color: #5E4239;
+  font-size: 1.5rem;
 }
 
 .form-group {
   margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #5E4239;
-  font-weight: 500;
 }
 
 .form-group input {
@@ -202,13 +247,18 @@ export default {
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 1rem;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: #7D574B;
   box-shadow: 0 0 5px rgba(125, 87, 75, 0.3);
+}
+
+.form-group input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
 }
 
 .btn {
@@ -218,10 +268,10 @@ export default {
   padding: 12px;
   border: none;
   border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
   font-size: 1rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
 }
 
 .btn:hover:not(:disabled) {
@@ -234,22 +284,27 @@ export default {
   cursor: not-allowed;
 }
 
-.login-link {
+.form-links {
+  margin-top: 1.5rem;
   text-align: center;
-  margin-top: 1rem;
+}
+
+.form-links p {
+  margin-bottom: 0.5rem;
   color: #666;
 }
 
-.login-link a {
+.form-links a {
   color: #7D574B;
   text-decoration: none;
   font-weight: 500;
 }
 
-.login-link a:hover {
+.form-links a:hover {
   text-decoration: underline;
 }
 
+/* Адаптивность */
 @media (max-width: 480px) {
   .form-container {
     padding: 1.5rem;
@@ -257,6 +312,7 @@ export default {
   
   .form-container h2 {
     font-size: 1.3rem;
+    margin-bottom: 1.5rem;
   }
   
   .form-group input {
