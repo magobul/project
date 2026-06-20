@@ -146,6 +146,8 @@
 <script>
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'Home',
   data() {
@@ -216,7 +218,7 @@ export default {
     async loadServices() {
       this.loading = true
       try {
-        const response = await axios.get('http://localhost:3000/api/services')
+        const response = await axios.get(`${API_URL}/api/services`)
         this.services = response.data
       } catch (error) {
         console.error('Ошибка загрузки услуг:', error)
@@ -300,7 +302,7 @@ export default {
     getImageUrl(imagePath) {
       if (!imagePath) return null
       if (imagePath.startsWith('http')) return imagePath
-      return `http://localhost:3000${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`
+      return `${API_URL}${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`
     },
     
     getServiceIcon(serviceName) {
