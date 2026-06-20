@@ -1,5 +1,8 @@
 import { io } from 'socket.io-client';
 
+// Получаем URL API из переменной окружения
+const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 class SocketService {
     constructor() {
         this.socket = null;
@@ -7,40 +10,55 @@ class SocketService {
         this.userId = null;
         this.userRole = null;
         this.eventHandlers = new Map();
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
     }
 
     connect(userData) {
         if (!this.socket) {
-            this.socket = io('http://localhost:3000', {
-                transports: ['websocket'],
+            console.log('🔌 Подключение к Socket.IO:', SOCKET_URL);
+            
+            this.socket = io(SOCKET_URL, {
+                transports: ['websocket', 'polling'], // пробуем websocket, если не работает - polling
                 autoConnect: true,
                 withCredentials: true,
                 reconnection: true,
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000
+                reconnectionAttempts: this.maxReconnectAttempts,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                // Добавляем таймаут для подключения
+                timeout: 10000
             });
 
             this.socket.on('connect', () => {
-                console.log('Socket.IO подключен');
+                console.log('✅ Socket.IO подключен к:', SOCKET_URL);
                 this.isConnected = true;
+                this.reconnectAttempts = 0;
                 
                 if (userData && userData.userId) {
                     this.authenticate(userData);
                 }
             });
 
-            this.socket.on('disconnect', () => {
-                console.log('Socket.IO отключен');
+            this.socket.on('disconnect', (reason) => {
+                console.log('❌ Socket.IO отключен:', reason);
                 this.isConnected = false;
             });
 
             this.socket.on('connect_error', (error) => {
-                console.error('Ошибка подключения Socket.IO:', error);
+                console.error('⚠️ Ошибка подключения Socket.IO:', error.message);
                 this.isConnected = false;
+                this.reconnectAttempts++;
+                
+                // Если не удается подключиться через websocket, пробуем polling
+                if (this.reconnectAttempts > 2) {
+                    console.log('🔄 Переключение на polling transport');
+                    this.socket.io.opts.transports = ['polling', 'websocket'];
+                }
             });
             
             this.socket.on('authenticated', (data) => {
-                console.log('Аутентификация успешна:', data);
+                console.log('🔐 Аутентификация успешна:', data);
                 this.userId = data.userId;
                 this.userRole = data.userRole;
             });
@@ -50,15 +68,20 @@ class SocketService {
 
     authenticate(userData) {
         if (this.socket && this.isConnected) {
+            console.log('🔐 Отправка аутентификации:', userData);
             this.socket.emit('authenticate', userData);
+        } else {
+            console.warn('⚠️ Не удалось отправить аутентификацию: сокет не подключен');
         }
     }
 
     disconnect() {
         if (this.socket) {
             // Удаляем все обработчики
-            for (const [event, handler] of this.eventHandlers) {
-                this.socket.off(event, handler);
+            for (const [event, handlers] of this.eventHandlers) {
+                handlers.forEach(handler => {
+                    this.socket.off(event, handler);
+                });
             }
             this.eventHandlers.clear();
             
@@ -67,6 +90,8 @@ class SocketService {
             this.isConnected = false;
             this.userId = null;
             this.userRole = null;
+            this.reconnectAttempts = 0;
+            console.log('🔌 Socket.IO отключен');
         }
     }
 
@@ -76,12 +101,13 @@ class SocketService {
 
     on(event, callback) {
         if (this.socket) {
-            // Сохраняем обработчик для возможности удаления
             if (!this.eventHandlers.has(event)) {
                 this.eventHandlers.set(event, []);
             }
             this.eventHandlers.get(event).push(callback);
             this.socket.on(event, callback);
+        } else {
+            console.warn(`⚠️ Не удалось добавить обработчик для события ${event}: сокет не инициализирован`);
         }
     }
 
@@ -105,10 +131,9 @@ class SocketService {
         if (this.socket && this.isConnected) {
             this.socket.emit(event, data);
         } else {
-            console.warn(`Socket не подключен, событие ${event} не отправлено`);
+            console.warn(`⚠️ Socket не подключен, событие ${event} не отправлено`);
         }
     }
-    
 }
 
 export default new SocketService();
