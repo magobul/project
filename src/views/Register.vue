@@ -1,46 +1,44 @@
 <template>
-  <div class="register">
-    <div class="container">
-      <div class="form-container">
-        <h2>Регистрация</h2>
-        <form @submit.prevent="register">
-          <div class="form-group">
-            <label>Имя Фамилия</label>
-            <input v-model="form.name" type="text" required>
-          </div>
-          
-          <div class="form-group">
-            <label>Email</label>
-            <input v-model="form.email" type="email" required>
-          </div>
-          
-          <div class="form-group">
-            <label>Телефон</label>
-            <input v-model="form.phone" type="tel" required>
-          </div>
-          
-          <div class="form-group">
-            <label>Пароль</label>
-            <input v-model="form.password" type="password" required>
-          </div>
-          
-          <button type="submit" class="btn" :disabled="loading">
-            {{ loading ? 'Регистрация...' : 'Зарегистрироваться' }}
-          </button>
-        </form>
+  <div class="register container">
+    <div class="form-container">
+      <h2>Регистрация</h2>
+      <form @submit.prevent="register">
+        <div class="form-group">
+          <label>Имя Фамилия</label>
+          <input v-model="form.name" type="text" required>
+        </div>
         
-        <p class="login-link">
-          Уже есть аккаунт? <router-link to="/login">Войти</router-link>
-        </p>
-      </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input v-model="form.email" type="email" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Телефон</label>
+          <input v-model="form.phone" type="tel" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Пароль</label>
+          <input v-model="form.password" type="password" required>
+        </div>
+        
+        <button type="submit" class="btn" :disabled="loading">
+          {{ loading ? 'Регистрация...' : 'Зарегистрироваться' }}
+        </button>
+      </form>
+      
+      <p class="login-link">
+        Уже есть аккаунт? <router-link to="/login">Войти</router-link>
+      </p>
     </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios'
-import socketService from '../plugins/socket.js'
 
+// Получаем URL API из переменной окружения
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export default {
@@ -53,83 +51,109 @@ export default {
         name: '',
         phone: ''
       },
-      loading: false
+      loading: false,
+      error: ''
     }
   },
   methods: {
     async register() {
-      // Валидация перед отправкой
+      // Валидация
       if (!this.form.name.trim()) {
-        alert('Введите имя');
-        return;
+        alert('Введите имя')
+        return
       }
       
       if (!this.form.email.trim()) {
-        alert('Введите email');
-        return;
+        alert('Введите email')
+        return
+      }
+      
+      // Простая валидация email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(this.form.email)) {
+        alert('Введите корректный email')
+        return
       }
       
       if (!this.form.phone.trim()) {
-        alert('Введите телефон');
-        return;
+        alert('Введите телефон')
+        return
       }
       
       if (!this.form.password.trim()) {
-        alert('Введите пароль');
-        return;
+        alert('Введите пароль')
+        return
       }
       
-      this.loading = true;
+      if (this.form.password.length < 6) {
+        alert('Пароль должен быть не менее 6 символов')
+        return
+      }
+      
+      this.loading = true
+      this.error = ''
       
       try {
-        const response = await axios.post(`${API_URL}/api/register`, this.form)
+        console.log('📝 Отправка регистрации:', this.form.email)
+        console.log('📡 API URL:', API_URL)
         
-        console.log('Ответ сервера:', response.data);
+        const response = await axios({
+          method: 'post',
+          url: `${API_URL}/api/register`,
+          data: {
+            name: this.form.name.trim(),
+            email: this.form.email.trim(),
+            phone: this.form.phone.trim(),
+            password: this.form.password
+          },
+          timeout: 30000,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        })
         
-        // Проверяем разные варианты ответа от сервера
+        console.log('✅ Ответ сервера:', response.data)
+        
         if (response.data.user) {
-          // Сохраняем данные пользователя
+          // Сохраняем пользователя
           localStorage.setItem('user', JSON.stringify(response.data.user))
           
-          // Подключаем Socket.IO
-          socketService.connect({
-            userId: response.data.user.id,
-            userRole: response.data.user.role || 'client',
-            clientId: response.data.user.id
-          })
-          
           // Отправляем событие о входе
-          window.dispatchEvent(new CustomEvent('user-login', { 
-            detail: { user: response.data.user, timestamp: Date.now() } 
-          }))
-          
-          alert('Регистрация успешна!');
-          this.$router.push('/profile')
-        } else if (response.data.client) {
-          // Для обратной совместимости
-          localStorage.setItem('user', JSON.stringify(response.data.client))
-          
-          socketService.connect({
-            userId: response.data.client.id,
-            userRole: 'client',
-            clientId: response.data.client.id
+          const loginEvent = new CustomEvent('user-login', { 
+            detail: { 
+              user: response.data.user, 
+              timestamp: Date.now(),
+              source: 'register'
+            } 
           })
+          window.dispatchEvent(loginEvent)
           
-          window.dispatchEvent(new CustomEvent('user-login', { 
-            detail: { user: response.data.client, timestamp: Date.now() } 
-          }))
-          
-          alert('Регистрация успешна!');
+          alert('✅ Регистрация успешна!')
           this.$router.push('/profile')
         } else {
-          alert('Ошибка: неверный формат ответа от сервера');
+          alert('❌ Ошибка: неверный формат ответа от сервера')
         }
+        
       } catch (error) {
-        console.error('Ошибка регистрации:', error);
-        const errorMsg = error.response?.data?.error || 'Ошибка регистрации'
-        alert(errorMsg)
+        console.error('❌ Ошибка регистрации:', error)
+        
+        let errorMessage = 'Ошибка регистрации'
+        
+        if (error.code === 'ECONNABORTED') {
+          errorMessage = 'Превышено время ожидания ответа от сервера. Попробуйте позже.'
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+        
+        alert('❌ ' + errorMessage)
+        this.error = errorMessage
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     }
   }
@@ -138,22 +162,17 @@ export default {
 
 <style scoped>
 .register {
-  background-color: #E2D4C2;
-  min-height: 70vh;
+  min-height: 80vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #F2E9DE;
   padding: 40px 20px;
-}
-
-.container {
-  width: 100%;
-  max-width: 400px;
-  margin: 0 auto;
 }
 
 .form-container {
   width: 100%;
+  max-width: 400px;
   background: white;
   padding: 2rem;
   border-radius: 10px;
@@ -179,7 +198,7 @@ export default {
 
 .form-group input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 1rem;
@@ -237,11 +256,11 @@ export default {
   }
   
   .form-container h2 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
   }
   
   .form-group input {
-    padding: 8px;
+    padding: 10px;
   }
   
   .btn {
