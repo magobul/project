@@ -43,6 +43,9 @@
 import axios from 'axios'
 import socketService from '../plugins/socket.js'
 
+// Получаем URL API из переменной окружения
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'AdminLogin',
   data() {
@@ -84,7 +87,7 @@ export default {
       try {
         console.log('Попытка входа админа:', this.form.username)
         
-        const response = await axios.post('http://localhost:3000/api/admin/login', {
+        const response = await axios.post(`${API_URL}/api/admin/login`, {
           username: this.form.username,
           password: this.form.password
         })
