@@ -394,6 +394,8 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 let scene = null
 let camera = null
 let renderer = null
@@ -551,7 +553,7 @@ export default {
     async loadPalletTypes() {
       this.loadingPalletTypes = true
       try {
-        const response = await axios.get('http://localhost:3000/api/pallet-types')
+        const response = await axios.get(`${API_URL}/api/pallet-types`)
         this.palletTypes = response.data
         console.log('Загружено типов паллет:', this.palletTypes.length)
         
@@ -699,7 +701,7 @@ export default {
       console.log(`Загрузка модели для типа: ${typeCode}`)
       
       try {
-        const response = await axios.get(`http://localhost:3000/api/pallet-model/${typeCode}`, {
+        const response = await axios.get(`${API_URL}/api/pallet-model/${typeCode}`, {
           responseType: 'arraybuffer',
           timeout: 10000
         })
@@ -943,7 +945,7 @@ export default {
       
       this.calculating = true
       try {
-        const response = await axios.post('http://localhost:3000/api/pallets/recommend', {
+        const response = await axios.post(`${API_URL}/api/pallets/recommend`, {
           length: this.customLength,
           width: this.customWidth,
           height: this.customHeight
@@ -995,7 +997,7 @@ export default {
       this.loadResult = null
       
       try {
-        const response = await axios.post('http://localhost:3000/api/pallets/calculate-load', {
+        const response = await axios.post(`${API_URL}/api/pallets/calculate-load`, {
           weight: this.loadWeight,
           pallet_type_code: this.selectedPalletType,
           load_type: this.loadType,
@@ -1129,7 +1131,7 @@ export default {
       console.log('Отправка данных заявки:', requestData)
       
       try {
-        const response = await axios.post('http://localhost:3000/api/requests', requestData)
+        const response = await axios.post(`${API_URL}/api/requests`, requestData)
         console.log('Ответ сервера:', response.data)
         
         if (response.data.success || response.data.request_id) {
