@@ -150,7 +150,7 @@ export default {
       this.syncPromise = (async () => {
         try {
           console.log('🔄 Фоновая синхронизация...')
-          await axios.post('http://localhost:3000/api/admin/gallery/sync-files')
+          await axios.post(`${API_URL}/api/admin/gallery/sync-files`)
           console.log('✅ Фоновая синхронизация завершена')
           await this.loadGallery()
         } catch (error) {
@@ -166,7 +166,7 @@ export default {
     async initialLoad() {
       this.loading = true
       try {
-        await axios.post('http://localhost:3000/api/admin/gallery/sync-files')
+        await axios.post(`${API_URL}/api/admin/gallery/sync-files`)
         await this.loadGallery()
       } catch (error) {
         console.error('❌ Ошибка:', error)
@@ -178,7 +178,7 @@ export default {
     
     async loadGallery() {
       try {
-        const response = await axios.get('http://localhost:3000/api/gallery')
+        const response = await axios.get(`${API_URL}/api/gallery`)
         this.images = response.data
         
         const uniqueCategories = new Set()
