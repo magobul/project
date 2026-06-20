@@ -59,6 +59,8 @@
 <script>
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'Profile',
   data() {
@@ -91,7 +93,7 @@ export default {
     
     async fetchUserFromServer() {
       try {
-        const response = await axios.get(`http://localhost:3000/api/users/${this.user.id}`)
+        const response = await axios.get(`${API_URL}/api/users/${this.user.id}`)
         if (response.data && response.data.created_at) {
           this.user.created_at = response.data.created_at
           // Обновляем данные в localStorage
