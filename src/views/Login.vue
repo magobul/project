@@ -43,6 +43,8 @@
 import axios from 'axios'
 import socketService from '../plugins/socket.js'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'Login',
   data() {
@@ -84,7 +86,7 @@ export default {
       try {
         console.log('Попытка входа:', this.form.email)
         
-        const response = await axios.post('http://localhost:3000/api/login', {
+        const response = await axios.post(`${API_URL}/api/login`, {
           email: this.form.email,
           password: this.form.password
         })
