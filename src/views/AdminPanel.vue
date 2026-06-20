@@ -499,7 +499,7 @@ ${request.assigned_employee_id ? 'Сотрудник: ' + this.getEmployeeName(r
       method: 'get',
       url: `${API_URL}/api/admin/export/excel`,
       responseType: 'blob',
-      timeout: 30000,
+      timeout: 120000,
       headers: {
         'Content-Type': 'application/json',
       }
@@ -568,7 +568,7 @@ async exportPallets() {
       method: 'get',
       url: `${API_URL}/api/admin/export/pallets-excel`,
       responseType: 'blob',
-      timeout: 30000,
+      timeout: 120000,
       headers: {
         'Content-Type': 'application/json',
       }
