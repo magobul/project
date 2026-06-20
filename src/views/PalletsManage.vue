@@ -57,6 +57,8 @@
 import axios from 'axios'
 import socketService from '../plugins/socket.js'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'PalletsManage',
   props: {
@@ -124,7 +126,7 @@ export default {
     
     async loadPallets() {
       try {
-        const response = await axios.get(`http://localhost:3000/api/requests/${this.requestId}/pallets`)
+        const response = await axios.get(`${API_URL}/api/requests/${this.requestId}/pallets`)
         this.pallets = response.data || []
         console.log('Загружено паллет:', this.pallets.length)
             // Отправляем событие о загрузке паллет в родительский компонент
@@ -147,7 +149,7 @@ export default {
       
       this.updateInProgress = true
       try {
-        await axios.put(`http://localhost:3000/api/pallets/${pallet.id}/status`, {
+        await axios.put(`${API_URL}/api/pallets/${pallet.id}/status`, {
           status: pallet.status
         })
         // Сокет сам обновит данные, но для скорости перезагружаем
