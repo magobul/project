@@ -488,82 +488,139 @@ ${request.assigned_employee_id ? 'Сотрудник: ' + this.getEmployeeName(r
     },
     
     // Экспорт в Excel
-    async exportRequests() {
-      if (this.exporting) return
-      
-      this.exporting = true
-      try {
-        console.log('Начинаем экспорт заявок...')
-        
-        const response = await axios({
-          method: 'get',
-          url: `${API_URL}/api/admin/export/excel`,
-          responseType: 'blob',
-          timeout: 30000
-        })
-        
-        console.log('Ответ получен:', response)
-        
-        const blob = new Blob([response.data], { 
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        })
-        
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `заявки_${new Date().toISOString().split('T')[0]}.xlsx`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-        
-        this.showNotification('Экспорт выполнен', 'Данные заявок успешно экспортированы в Excel', 'success')
-      } catch (error) {
-        console.error('Ошибка экспорта заявок:', error)
-        this.showNotification('Ошибка', 'Не удалось экспортировать данные: ' + (error.message || 'Неизвестная ошибка'), 'error')
-      } finally {
-        this.exporting = false
-      }
-    },
+   async exportRequests() {
+  if (this.exporting) return
+  
+  this.exporting = true
+  try {
+    console.log('📊 Начинаем экспорт заявок...')
     
-    async exportPallets() {
-      if (this.exporting) return
-      
-      this.exporting = true
+    const response = await axios({
+      method: 'get',
+      url: `${API_URL}/api/admin/export/excel`,
+      responseType: 'blob',
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    
+    // Проверяем, что ответ - это файл
+    const contentType = response.headers['content-type']
+    if (!contentType || !contentType.includes('spreadsheetml.sheet')) {
+      // Если пришла ошибка в формате JSON
+      const text = await response.data.text()
       try {
-        console.log('Начинаем экспорт паллет...')
-        
-        const response = await axios({
-          method: 'get',
-          url: `${API_URL}/api/admin/export/pallets-excel`,
-          responseType: 'blob',
-          timeout: 30000
-        })
-        
-        console.log('Ответ получен:', response)
-        
-        const blob = new Blob([response.data], { 
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        })
-        
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `паллеты_${new Date().toISOString().split('T')[0]}.xlsx`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-        
-        this.showNotification('Экспорт выполнен', 'Данные паллет успешно экспортированы в Excel', 'success')
-      } catch (error) {
-        console.error('Ошибка экспорта паллет:', error)
-        this.showNotification('Ошибка', 'Не удалось экспортировать данные: ' + (error.message || 'Неизвестная ошибка'), 'error')
-      } finally {
-        this.exporting = false
+        const errorData = JSON.parse(text)
+        throw new Error(errorData.error || 'Ошибка экспорта')
+      } catch {
+        throw new Error('Неверный формат ответа от сервера')
       }
     }
-  },
+    
+    // Создаем ссылку для скачивания
+    const blob = new Blob([response.data], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Извлекаем имя файла из заголовка или используем стандартное
+    let fileName = `заявки_${new Date().toISOString().split('T')[0]}.xlsx`
+    const contentDisposition = response.headers['content-disposition']
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (match && match[1]) {
+        fileName = match[1].replace(/['"]/g, '')
+      }
+    }
+    
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    // Очищаем URL
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+    }, 100)
+    
+    this.showNotification(' Экспорт выполнен', 'Данные заявок успешно экспортированы в Excel', 'success')
+    
+  } catch (error) {
+    console.error(' Ошибка экспорта:', error)
+    this.showNotification(' Ошибка', 'Не удалось экспортировать данные: ' + (error.message || 'Неизвестная ошибка'), 'error')
+  } finally {
+    this.exporting = false
+  }
+},
+
+async exportPallets() {
+  if (this.exporting) return
+  
+  this.exporting = true
+  try {
+    console.log('📊 Начинаем экспорт паллет...')
+    
+    const response = await axios({
+      method: 'get',
+      url: `${API_URL}/api/admin/export/pallets-excel`,
+      responseType: 'blob',
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    
+    // Проверяем, что ответ - это файл
+    const contentType = response.headers['content-type']
+    if (!contentType || !contentType.includes('spreadsheetml.sheet')) {
+      const text = await response.data.text()
+      try {
+        const errorData = JSON.parse(text)
+        throw new Error(errorData.error || 'Ошибка экспорта')
+      } catch {
+        throw new Error('Неверный формат ответа от сервера')
+      }
+    }
+    
+    const blob = new Blob([response.data], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    let fileName = `паллеты_${new Date().toISOString().split('T')[0]}.xlsx`
+    const contentDisposition = response.headers['content-disposition']
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (match && match[1]) {
+        fileName = match[1].replace(/['"]/g, '')
+      }
+    }
+    
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+    }, 100)
+    
+    this.showNotification('Экспорт выполнен', 'Данные паллет успешно экспортированы в Excel', 'success')
+    
+  } catch (error) {
+    console.error(' Ошибка экспорта:', error)
+    this.showNotification(' Ошибка', 'Не удалось экспортировать данные: ' + (error.message || 'Неизвестная ошибка'), 'error')
+  } finally {
+    this.exporting = false
+  }
+},
   watch: {
     servicesData: {
       handler() {
