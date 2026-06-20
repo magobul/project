@@ -91,6 +91,8 @@
 <script>
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 export default {
   name: 'AssignEmployee',
   props: {
@@ -316,7 +318,7 @@ export default {
       this.noEmployees = false;
       
       try {
-        const response = await axios.post('http://localhost:3000/api/employees/available', {
+        const response = await axios.post(`${API_URL}/api/employees/available`, {
           start_datetime: this.startDatetime,
           end_datetime: this.endDatetime,
           service_duration_days: this.workingDays
@@ -350,7 +352,7 @@ export default {
       this.assigning = employee.id;
       
       try {
-        const response = await axios.post(`http://localhost:3000/api/requests/${this.requestId}/assign`, {
+        const response = await axios.post(`${API_URL}/api/requests/${this.requestId}/assign`, {
           employee_id: employee.id,
           start_datetime: this.startDatetime,
           end_datetime: this.endDatetime
